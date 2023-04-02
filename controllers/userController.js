@@ -17,6 +17,7 @@ exports.create = function (req, res, next){
     };
 
     const user = new User(userData);
+    if (!regexPassword(password)) return res.status(500).send({error: "Le mot de passe doit contenir au moins huit caractères, dont au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial."});
     user.setPassword(password);
     user.save().then(() => {
         // req.session.user = user; // A supprimer ou remplacer
@@ -55,11 +56,33 @@ exports.read = function (req, res, next) {
  * @param {*} next 
 */
 exports.update = function (req, res, next){
-    console.log(req.params.id);
-    User.findByIdAndUpdate(req.params.id, req.body, {new: true}).then((resp) => {
-        res.json(resp);
-    });
+    const reqBody = req.body;
+    User.findById(req.params.id).select(["-is_admin", "-hash", "-salt"]).then((u) =>{
+        if (reqBody.name) u.name = reqBody.name;
+        if (reqBody.first_name) u.first_name = reqBody.first_name;
+        if (reqBody.birthday) u.birthday = reqBody.birthday;
+        if (reqBody.city) u.city = reqBody.city;
+        if (reqBody.email) u.email = reqBody.email;
+
+        if (reqBody.newPassword && reqBody.password){
+            if (u.validPassword(reqBody.password)){
+                if (!regexPassword(reqBody.newPassword)) return res.status(500).send({error: "Le mot de passe doit contenir au moins huit caractères, dont au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial."});
+                u.setPassword(reqBody.newPassword);
+            }
+        }
+        u.save().then(() => {
+            res.json(u);
+        });
+        /*const password = req.body.password;
+        if (password) u.setPassword(password);*/
+    })
 };
+
+function regexPassword(password){
+    regexOk = password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/);
+    if (regexOk) return true;
+    return false;
+}
 
 /**
  * Supprime un utilisateur
