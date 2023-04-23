@@ -1,4 +1,7 @@
 let User = require('../models/userModel');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const privateKey = fs.readFileSync('key.pub');
 
 /**
  * Créer un utilisateur
@@ -20,7 +23,10 @@ exports.create = function (req, res, next){
     if (!regexPassword(password)) return res.status(500).send({error: "Le mot de passe doit contenir au moins huit caractères, dont au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial."});
     user.setPassword(password);
     user.save().then(() => {
-        if (userData) return res.json(userData);
+        if (userData) {
+            userData._id = user._id.toString();
+            return res.json(userData);
+        }
         throw new Error();
     }).catch((err) => {
         console.log(err);
@@ -97,9 +103,7 @@ exports.update = function (req, res, next){
 };
 
 function regexPassword(password){
-    regexOk = password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/);
-    if (regexOk) return true;
-    return false;
+    return password.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/);
 }
 
 /**
@@ -117,3 +121,29 @@ exports.delete = function (req, res, next){
         res.status(500).send({error : "Impossible de supprimer cet utilisateur."});
     });
 };
+
+/**
+ * Fonction de Login
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+*/
+exports.login = function (req, res, next) {
+    User.findOne({email: req.body.email}).then((user) => {
+        if (user.validPassword(req.body.password)){
+            user.hash = undefined;
+            user.salt = undefined;
+            const token = jwt.sign(user.toObject(), privateKey , {algorithm: 'HS256', expiresIn: 60*60*24});
+            res.status(200).json({
+                message : "Vous vous êtes bien connecté",
+                token	: token
+            });
+        }
+        else {
+            res.status(500).send({error: "L'email ou le mot de passe n'est pas correct."});
+        }
+    })
+    .catch(() => {
+        res.status(500).send({error: "L'email ou le mot de passe n'est pas correct."});
+    });
+}
