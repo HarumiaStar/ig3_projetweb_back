@@ -7,6 +7,11 @@ const cors = require('cors')
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/userRoute');
+const filmsRouter = require('./routes/filmRoute');
+const genresRouter = require('./routes/genreRoute');
+const sessionsRouter = require('./routes/sessionRoute');
+const bookingsRouter = require('./routes/bookingRoute');
+const cinemasRouter = require('./routes/cinemaRoute');
 
 const app = express();
 
@@ -19,6 +24,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/films', filmsRouter);
+app.use('/genres', genresRouter);
+app.use('/sessions', sessionsRouter);
+app.use('/bookings', bookingsRouter);
+app.use('/cinemas', cinemasRouter);
 
 main().catch(err => console.log(err));
 
