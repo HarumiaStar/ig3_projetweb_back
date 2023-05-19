@@ -76,7 +76,7 @@ exports.delete = function (req, res, next) {
  */
 exports.update = function (req, res, next) {
     Genre.findByIdAndUpdate(req.params.id, req.body, { new: true }).then((resp) => {
-        if (resp) return res.json(Genre);
+        if (resp) return res.json(resp);
         throw new Error();
     })
         .catch((err) => {

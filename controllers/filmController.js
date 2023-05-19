@@ -7,7 +7,7 @@ let Film = require('../models/filmModel');
  * @param {*} next 
  */
 exports.readAll = function (req, res, next) {
-    Film.find({})
+    Film.find({}).populate('genres')
         .then((resp) => {
             if (resp) return res.json(resp);
             throw new Error();
@@ -25,13 +25,14 @@ exports.readAll = function (req, res, next) {
  * @param {*} next 
  */
 exports.read = function (req, res, next) {
-    Film.findById(req.params.id).then((resp) => {
-        if (resp) return res.json(resp);
-        throw new Error();
-    }).catch((err) => {
-        console.log(err);
-        res.status(500).send({ error: "Impossible de lire les informations de ce film." });
-    });
+    Film.findById(req.params.id).populate('genres')
+        .then((resp) => {
+            if (resp) return res.json(resp);
+            throw new Error();
+        }).catch((err) => {
+            console.log(err);
+            res.status(500).send({ error: "Impossible de lire les informations de ce film." });
+        });
 };
 
 /**
@@ -75,10 +76,11 @@ exports.delete = function (req, res, next) {
  * @param {*} next 
  */
 exports.update = function (req, res, next) {
-    Film.findByIdAndUpdate(req.params.id, req.body, { new: true }).then((resp) => {
-        if (resp) return res.json(Film);
-        throw new Error();
-    })
+    Film.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('genres')
+        .then((resp) => {
+            if (resp) return res.json(resp);
+            throw new Error();
+        })
         .catch((err) => {
             console.log(err);
             res.status(500).send({ error: "Impossible de mettre à jour les données ce film." });

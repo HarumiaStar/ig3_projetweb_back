@@ -76,7 +76,7 @@ exports.delete = function (req, res, next) {
  */
 exports.update = function (req, res, next) {
     Booking.findByIdAndUpdate(req.params.id, req.body, { new: true }).then((resp) => {
-        if (resp) return res.json(Booking);
+        if (resp) return res.json(resp);
         throw new Error();
     })
         .catch((err) => {

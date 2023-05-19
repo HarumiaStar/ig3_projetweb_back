@@ -43,7 +43,7 @@ exports.read = function (req, res, next) {
  */
 exports.create = function (req, res, next) {
     Cinema.create(req.body).then((resp) => {
-        if (resp) return resp.json();
+        if (resp) return res.json(resp);
         throw new Error();
     })
         .catch((err) => {
@@ -76,7 +76,7 @@ exports.delete = function (req, res, next) {
  */
 exports.update = function (req, res, next) {
     Cinema.findByIdAndUpdate(req.params.id, req.body, { new: true }).then((resp) => {
-        if (resp) return res.json(Cinema);
+        if (resp) return res.json(resp);
         throw new Error();
     })
     .catch((err) => {
