@@ -127,7 +127,7 @@ exports.delete = function (req, res, next){
  * @param {*} next
 */
 exports.login = function (req, res, next) {
-    User.findOne({email: req.body.email}).then((user) => {
+    User.findOne({email: req.body.email}).select(["+hash", "+salt"]).then((user) => {
         if (user.validPassword(req.body.password)){
             const token = jwt.sign(user.toObject(), privateKey , {algorithm: 'HS256', expiresIn: 60*60*24});
             res.status(200).json({
