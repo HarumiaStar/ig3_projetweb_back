@@ -14,8 +14,14 @@ const UserSchema = new mongoose.Schema({
         type: String,
         unique: true
     },
-    hash: String,
-    salt: String,
+    hash: {
+        type: String,
+        select: false
+    },
+    salt: {
+        type: String,
+        select: false
+    },
     
     is_admin: {
         type: Boolean,

@@ -7,7 +7,7 @@ let Session = require('../models/sessionModel');
  * @param {*} next 
  */
 exports.readAll = function (req, res, next) {
-    Session.find({})
+    Session.find({}).populate('film').populate('cinema')
         .then((resp) => {
             if (resp) return res.json(resp);
             throw new Error();
@@ -25,7 +25,8 @@ exports.readAll = function (req, res, next) {
  * @param {*} next 
  */
 exports.read = function (req, res, next) {
-    Session.findById(req.params.id).then((resp) => {
+    Session.findById(req.params.id).populate('film').populate('cinema')
+    .then((resp) => {
         if (resp) return res.json(resp);
         throw new Error();
     }).catch((err) => {

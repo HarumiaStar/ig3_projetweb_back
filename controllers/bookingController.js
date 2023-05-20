@@ -7,7 +7,14 @@ let Booking = require('../models/bookingModel');
  * @param {*} next 
  */
 exports.readAll = function (req, res, next) {
-    Booking.find({})
+    Booking.find({}).populate(
+        ({
+        path : 'session',
+        populate : {
+          path : 'film cinema'
+        }
+      })
+      ).populate('user')
         .then((resp) => {
             if (resp) return res.json(resp);
             throw new Error();
@@ -25,13 +32,21 @@ exports.readAll = function (req, res, next) {
  * @param {*} next 
  */
 exports.read = function (req, res, next) {
-    Booking.findById(req.params.id).then((resp) => {
-        if (resp) return res.json(resp);
-        throw new Error();
-    }).catch((err) => {
-        console.log(err);
-        res.status(500).send({ error: "Impossible de lire les informations de cette réservation." });
-    });
+    Booking.findById(req.params.id).populate(
+        ({
+        path : 'session',
+        populate : {
+          path : 'film cinema'
+        }
+      })
+    ).populate('user')
+        .then((resp) => {
+            if (resp) return res.json(resp);
+            throw new Error();
+        }).catch((err) => {
+            console.log(err);
+            res.status(500).send({ error: "Impossible de lire les informations de cette réservation." });
+        });
 };
 
 /**

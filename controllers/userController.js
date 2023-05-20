@@ -41,7 +41,7 @@ exports.create = function (req, res, next){
  * @param {*} next 
  */
 exports.readAll = function (req, res, next) {
-    User.find({}).select(["-hash", "-salt"]).then((resp) => {
+    User.find({}).then((resp) => {
         if (resp) return res.json(resp);
         throw new Error();
     }).catch((err) => {
@@ -57,7 +57,7 @@ exports.readAll = function (req, res, next) {
  * @param {*} next 
 */
 exports.read = function (req, res, next) {
-    User.findById(req.params.id).select(["-is_admin", "-hash", "-salt"]).then((resp) => {
+    User.findById(req.params.id).select("-is_admin").then((resp) => {
         if (resp) return res.json(resp);
         throw new Error();
     }).catch((err) => {
@@ -89,8 +89,6 @@ exports.update = function (req, res, next){
             else return res.status(500).send({error: "Le mot de passe n'est pas correct."});
         }
         user.save().then(() => {
-            user.hash = undefined;
-            user.salt = undefined;
             res.json(user);
         }).catch((err) => {
             console.log(err);
@@ -113,7 +111,7 @@ function regexPassword(password){
  * @param {*} next 
 */
 exports.delete = function (req, res, next){
-    User.findByIdAndDelete(req.params.id).select(["-hash", "-salt"]).then((resp) => {
+    User.findByIdAndDelete(req.params.id).then((resp) => {
         if (resp) return res.json(resp);
         throw new Error();
     }).catch((err) => {
@@ -131,8 +129,6 @@ exports.delete = function (req, res, next){
 exports.login = function (req, res, next) {
     User.findOne({email: req.body.email}).then((user) => {
         if (user.validPassword(req.body.password)){
-            user.hash = undefined;
-            user.salt = undefined;
             const token = jwt.sign(user.toObject(), privateKey , {algorithm: 'HS256', expiresIn: 60*60*24});
             res.status(200).json({
                 message : "Vous vous êtes bien connecté",
