@@ -75,6 +75,9 @@ exports.create = function (req, res, next) {
  */
 exports.delete = function (req, res, next) {
     Booking.findByIdAndDelete(req.params.id).then((resp) => {
+        if (resp && (resp.user._id !== req.decoded._id && !req.decoded.is_admin)) {
+            return res.status(403).send({ error: "Vous n'avez pas les droits pour supprimer cette réservation." });
+        }
         if (resp) return res.json(resp);
         throw new Error();
     }).catch((err) => {
@@ -91,11 +94,14 @@ exports.delete = function (req, res, next) {
  */
 exports.update = function (req, res, next) {
     Booking.findByIdAndUpdate(req.params.id, req.body, { new: true }).then((resp) => {
+        if (resp && (resp.user._id.toString() !== req.decoded._id && !req.decoded.is_admin)) {
+            return res.status(403).send({ error: "Vous n'avez pas les droits pour mettre à jour cette réservation." });
+        }
         if (resp) return res.json(resp);
         throw new Error();
     })
-        .catch((err) => {
-            console.log(err);
-            res.status(500).send({ error: "Impossible de mettre à jour les données ce réservations." });
-        });
+    .catch((err) => {
+        console.log(err);
+        res.status(500).send({ error: "Impossible de mettre à jour les données ce réservations." });
+    });
 }

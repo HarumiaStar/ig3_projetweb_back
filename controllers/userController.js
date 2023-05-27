@@ -73,6 +73,14 @@ exports.read = function (req, res, next) {
  * @param {*} next 
 */
 exports.update = function (req, res, next){
+    console.log(req && (req.body._id !== req.decoded._id && !req.decoded.is_admin));
+    if (req && (req.body._id !== req.decoded._id && !req.decoded.is_admin)) {
+        return res.status(403).json({
+            status: 403,
+            success: false,
+            message: "Vous n'avez pas les droits pour mettre à jour cet utilisateur."
+        });
+    }
     const reqBody = req.body;
     User.findById(req.params.id).select("-is_admin").then((user) =>{
         if (reqBody.name) user.name = reqBody.name;
@@ -111,6 +119,9 @@ function regexPassword(password){
  * @param {*} next 
 */
 exports.delete = function (req, res, next){
+    if (req && (req._id !== req.decoded._id && !req.decoded.is_admin)) {
+        return res.status(403).send({ error: "Vous n'avez pas les droits pour supprimer cet utilisateur." });
+    }
     User.findByIdAndDelete(req.params.id).then((resp) => {
         if (resp) return res.json(resp);
         throw new Error();
@@ -129,6 +140,8 @@ exports.delete = function (req, res, next){
 exports.login = function (req, res, next) {
     User.findOne({email: req.body.email}).select(["+hash", "+salt"]).then((user) => {
         if (user.validPassword(req.body.password)){
+            user.hash = undefined;
+            user.salt = undefined;
             const token = jwt.sign(user.toObject(), privateKey , {algorithm: 'HS256', expiresIn: 60*60*24});
             res.status(200).json({
                 message : "Vous vous êtes bien connecté",
