@@ -28,6 +28,12 @@ const UserSchema = new mongoose.Schema({
         default: false,
         requried: false
     },
+
+    password_token_reset: {
+        type: String,
+        default: "",
+        select: false
+    },
 },
 {
     collection: 'users',
@@ -51,6 +57,11 @@ UserSchema.methods.validPassword = function(password) {
     const hash = crypto.pbkdf2Sync(password,
                                  this.salt, 1000, 64, `sha512`).toString(`hex`);
     return this.hash === hash;
+};
+
+UserSchema.methods.setPasswordTokenReset = function() {
+    const token = crypto.randomBytes(32).toString('hex');
+    this.password_token_reset = token;
 };
 
 

@@ -75,7 +75,7 @@ exports.create = function (req, res, next) {
  */
 exports.delete = function (req, res, next) {
     Booking.findByIdAndDelete(req.params.id).then((resp) => {
-        if (resp && (resp.user._id !== req.decoded._id && !req.decoded.is_admin)) {
+        if (resp && (resp.user._id.toString() !== req.decoded._id && !req.decoded.is_admin)) {
             return res.status(403).send({ error: "Vous n'avez pas les droits pour supprimer cette réservation." });
         }
         if (resp) return res.json(resp);

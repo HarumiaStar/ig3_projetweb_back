@@ -1,4 +1,5 @@
 let Session = require('../models/sessionModel');
+const Booking = require('../models/bookingModel');
 
 /**
  * Retourne toutes les séances
@@ -60,8 +61,15 @@ exports.create = function (req, res, next) {
  * @param {*} next 
  */
 exports.delete = function (req, res, next) {
-    Session.findByIdAndDelete(req.params.id).then((resp) => {
-        if (resp) return res.json(resp);
+    Booking.deleteMany({session: req.params.id}).then((resp) => {
+        if (resp) 
+        return Session.findByIdAndDelete(req.params.id).then((resp) => {
+            if (resp) return res.json(resp);
+            throw new Error();
+        }).catch((err) => {
+            console.log(err);
+            res.status(500).send({ error: "Impossible de supprimer cette séance." });
+        });
         throw new Error();
     }).catch((err) => {
         console.log(err);

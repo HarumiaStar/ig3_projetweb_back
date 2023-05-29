@@ -1,4 +1,6 @@
 let Film = require('../models/filmModel');
+const Session = require('../models/sessionModel');
+const Booking = require('../models/bookingModel');
 
 /**
  * Retourne tous les films
@@ -60,12 +62,28 @@ exports.create = function (req, res, next) {
  * @param {*} next 
  */
 exports.delete = function (req, res, next) {
-    Film.findByIdAndDelete(req.params.id).then((resp) => {
-        if (resp) return res.json(resp);
-        throw new Error();
+    Session.find({ film: req.params.id }).then((sessions) => {
+        const sessionIds = sessions.map(session => session._id);
+        Booking.deleteMany({ session: { $in: sessionIds } }).then(() => {
+            Session.deleteMany({ film: req.params.id }).then(() => {
+                Film.findByIdAndDelete(req.params.id).then((resp) => {
+                    if (resp) return res.json(resp);
+                    throw new Error();
+                }).catch((err) => {
+                    console.log(err);
+                    res.status(500).send({ error: "Impossible de supprimer ce film." });
+                });
+            }).catch((err) => {
+                console.log(err);
+                res.status(500).send({ error: "Impossible de supprimer les sessions de ce film." });
+            });
+        }).catch((err) => {
+            console.log(err);
+            res.status(500).send({ error: "Impossible de supprimer les réservations de ce film." });
+        });
     }).catch((err) => {
         console.log(err);
-        res.status(500).send({ error: "Impossible de supprimer ce film." });
+        res.status(500).send({ error: "Impossible de trouver les sessions de ce film." });
     });
 };
 

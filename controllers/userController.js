@@ -2,6 +2,8 @@ let User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const privateKey = fs.readFileSync('key.pub');
+const { sendMail } = require('../utils/mail');
+const Booking = require('../models/bookingModel');
 
 /**
  * Créer un utilisateur
@@ -122,13 +124,24 @@ exports.delete = function (req, res, next){
     if (req && (req._id !== req.decoded._id && !req.decoded.is_admin)) {
         return res.status(403).send({ error: "Vous n'avez pas les droits pour supprimer cet utilisateur." });
     }
-    User.findByIdAndDelete(req.params.id).then((resp) => {
-        if (resp) return res.json(resp);
+    Booking.deleteMany({user: req.params.id}).then((resp) => {
+        console.log(resp);
+        if (resp) {
+           return User.findByIdAndDelete(req.params.id).then((resp2) => {
+                if (resp2) return res.json(resp2);
+                throw new Error();
+            }).catch((err) => {
+                console.log(err);
+                res.status(500).send({error : "Impossible de supprimer cet utilisateur."});
+            });
+        }
         throw new Error();
-    }).catch((err) => {
+    }
+    ).catch((err) => {
         console.log(err);
-        res.status(500).send({error : "Impossible de supprimer cet utilisateur."});
+        res.status(500).send({error : "Impossible de supprimer cette réservation."});
     });
+    
 };
 
 /**
@@ -154,5 +167,51 @@ exports.login = function (req, res, next) {
     })
     .catch(() => {
         res.status(500).send({error: "L'email ou le mot de passe n'est pas correct."});
+    });
+}
+
+exports.resetPassword = function (req, res, next) {
+    console.log(req.body.email);
+    User.findOne({email: req.body.email}).select("+password_token_reset").then((user) => {
+        user.setPasswordTokenReset();
+        user.save().then(() => {
+            const to = user.email;
+            const subject = "[Suzanne-WOA] Réinitialisation de votre mot de passe";
+            const html = `<h1>Bonjour <strong>${user.first_name} ${user.name}</strong></h1>
+            <br>
+            <p>Pour réinitialisser votre mot de passe, cliquez 
+                <a href="https://suzanne-woa.rtinox.fr/reset-password/${user.password_token_reset}">ici</a> :
+            </p>`;
+            sendMail(to, subject, html);
+            res.status(200).json({message : "Votre mail de réinitialisation de mot de passe a bien été envoyé."});
+        })
+        .catch(() => {
+            res.status(200).send({error: "Attention : L'email de réinitialisation de mot de passe a été envoyé s'il existe un compte pour ce mail."});
+        });
+    })
+    .catch(() => {
+        res.status(200).json({message: "L'email de réinitialisation de mot de passe a été envoyé s'il existe un compte pour ce mail."});
+    });
+}
+
+exports.resetPasswordToken = function (req, res, next) {
+    User.findOne({password_token_reset: req.params.token}).select(["+hash", "+salt"]).then((user) => {
+        if (user && user.email === req.body.email){
+            if (!regexPassword(req.body.password)) return res.status(500).send({error: "Le mot de passe doit contenir au moins huit caractères, dont au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial."});
+            user.setPassword(req.body.password);
+            user.password_token_reset = "";
+            user.save().then(() => {
+                res.status(200).json({message: "Votre mot de passe a bien été réinitialisé."});
+            })
+            .catch(() => {
+                res.status(500).send({error: "Impossible de réinitialiser votre mot de passe."});
+            });
+        }
+        else {
+            res.status(500).send({error: "Le token n'est pas correct."});
+        }
+    })
+    .catch(() => {
+        res.status(500).send({error: "Le token n'est pas correct."});
     });
 }
