@@ -84,13 +84,15 @@ exports.update = function (req, res, next){
         });
     }
     const reqBody = req.body;
-    User.findById(req.params.id).select("-is_admin").then((user) =>{
+    User.findById(req.params.id).then((user) =>{
         if (reqBody.name) user.name = reqBody.name;
         if (reqBody.first_name) user.first_name = reqBody.first_name;
         if (reqBody.birthday) user.birthday = reqBody.birthday;
         if (reqBody.city) user.city = reqBody.city;
         if (reqBody.email) user.email = reqBody.email;
-
+        if (!req.decoded.is_admin && reqBody.is_admin)
+            return res.status(403).send({message: "Vous n'avez pas les permissions de modifier cette valeur."});
+        if (req.decoded.is_admin && reqBody.is_admin) user.is_admin = reqBody.is_admin;
         if (reqBody.newPassword && reqBody.password){
             if (user.validPassword(reqBody.password)){
                 if (!regexPassword(reqBody.newPassword)) return res.status(500).send({error: "Le mot de passe doit contenir au moins huit caractères, dont au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial."});
@@ -155,7 +157,7 @@ exports.login = function (req, res, next) {
         if (user.validPassword(req.body.password)){
             user.hash = undefined;
             user.salt = undefined;
-            const token = jwt.sign(user.toObject(), privateKey , {algorithm: 'HS256', expiresIn: 60*60*24});
+            const token = jwt.sign(user.toObject(), privateKey , {algorithm: 'HS256', expiresIn: 60*60*2});
             res.status(200).json({
                 message : "Vous vous êtes bien connecté",
                 token	: token
@@ -195,23 +197,26 @@ exports.resetPassword = function (req, res, next) {
 }
 
 exports.resetPasswordToken = function (req, res, next) {
-    User.findOne({password_token_reset: req.params.token}).select(["+hash", "+salt"]).then((user) => {
-        if (user && user.email === req.body.email){
-            if (!regexPassword(req.body.password)) return res.status(500).send({error: "Le mot de passe doit contenir au moins huit caractères, dont au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial."});
+    User.findOne({password_token_reset: req.params.token})
+    .select(["+hash", "+salt", "+password_token_reset_created_at"])
+    .then((user) => {
+        if (user && user.email === req.body.email) {
+            if (!user.validTokenExpiration()) return res.status(401).send({message: "Le token de changement de mot de passe n'est plus valide."});
+            if (!regexPassword(req.body.password)) return res.status(400).send({error: "Le mot de passe doit contenir au moins huit caractères, dont au moins une lettre majuscule, une lettre minuscule, un chiffre et un caractère spécial."});
             user.setPassword(req.body.password);
             user.password_token_reset = "";
-            user.save().then(() => {
-                res.status(200).json({message: "Votre mot de passe a bien été réinitialisé."});
-            })
-            .catch(() => {
-                res.status(500).send({error: "Impossible de réinitialiser votre mot de passe."});
-            });
-        }
-        else {
-            res.status(500).send({error: "Le token n'est pas correct."});
+            user.save()
+                .then(() => {
+                    res.status(200).json({message: "Votre mot de passe a bien été réinitialisé."});
+                })
+                .catch(() => {
+                    res.status(500).send({error: "Impossible de réinitialiser votre mot de passe."});
+                });
+        } else {
+            res.status(401).send({error: "Le token n'est pas correct."});
         }
     })
     .catch(() => {
-        res.status(500).send({error: "Le token n'est pas correct."});
+        res.status(401).send({error: "Le token n'est pas correct."});
     });
 }

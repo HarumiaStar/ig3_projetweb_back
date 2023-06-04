@@ -34,6 +34,10 @@ const UserSchema = new mongoose.Schema({
         default: "",
         select: false
     },
+    password_token_reset_created_at: {
+        type: Date,
+        select: false
+    },
 },
 {
     collection: 'users',
@@ -60,8 +64,23 @@ UserSchema.methods.validPassword = function(password) {
 };
 
 UserSchema.methods.setPasswordTokenReset = function() {
+    this.password_token_reset_created_at = Date.now();
     const token = crypto.randomBytes(32).toString('hex');
     this.password_token_reset = token;
+};
+
+UserSchema.methods.validTokenExpiration = function(){
+    // Get the current timestamp
+    const now = Date.now();
+
+    // Calculate the difference in milliseconds
+    const diffMillis = now - this.password_token_reset_created_at;
+
+    // Convert the difference to minutes
+    const diffMinutes = diffMillis / (1000 * 60);
+
+    // Check if the difference is lower than 2 minutes
+    return diffMinutes < 10;
 };
 
 
